@@ -3,9 +3,9 @@
 library(shiny)
 library(shinyOAuth)
 
-# -------------------------------------------------------------------
+# ---------------------------------------------------------
 # OAuth provider config (CSI Pacific)
-# -------------------------------------------------------------------
+# ---------------------------------------------------------
 
 provider <- oauth_provider(
   name       = "CSI Pacific",
@@ -17,22 +17,14 @@ provider <- oauth_provider(
     "CSIP_TOKEN_URL",
     "https://apps.csipacific.ca/o/token/"
   ),
-  # Optional: if you have a userinfo endpoint exposed by CSI:
-  userinfo_url = Sys.getenv(
-    "CSIP_USERINFO_URL",
-    ""  # leave empty if not available
-  )
+  # Optional: only if you actually have this endpoint:
+  userinfo_url = Sys.getenv("CSIP_USERINFO_URL", "")
 )
 
-# -------------------------------------------------------------------
+# ---------------------------------------------------------
 # OAuth client config (CONFIDENTIAL client)
-# -------------------------------------------------------------------
-# These must all be set as environment variables on Posit Connect.
-# - CSIP_CLIENT_ID
-# - CSIP_CLIENT_SECRET
-# - CSIP_REDIRECT_URI
-# - CSIP_SCOPES (optional, default: "openid profile email")
-# -------------------------------------------------------------------
+#   All secrets/URLs pulled from environment variables
+# ---------------------------------------------------------
 
 scopes <- strsplit(
   Sys.getenv("CSIP_SCOPES", "openid profile email"),
@@ -42,14 +34,14 @@ scopes <- strsplit(
 client <- oauth_client(
   provider      = provider,
   client_id     = Sys.getenv("CSIP_CLIENT_ID"),
-  client_secret = Sys.getenv("CSIP_CLIENT_SECRET"),  # <- confidential
-  redirect_uri  = Sys.getenv("CSIP_REDIRECT_URI"),   # exact app URL
+  client_secret = Sys.getenv("CSIP_CLIENT_SECRET"),  # confidential
+  redirect_uri  = Sys.getenv("CSIP_REDIRECT_URI"),   # Connect URL
   scopes        = scopes
 )
 
-# -------------------------------------------------------------------
+# ---------------------------------------------------------
 # UI
-# -------------------------------------------------------------------
+# ---------------------------------------------------------
 
 ui <- fluidPage(
   use_shinyOAuth(),
@@ -57,12 +49,12 @@ ui <- fluidPage(
   uiOutput("login_information")
 )
 
-# -------------------------------------------------------------------
+# ---------------------------------------------------------
 # Server
-# -------------------------------------------------------------------
+# ---------------------------------------------------------
 
 server <- function(input, output, session) {
-  # Log query string for debugging in Connect logs
+  # Helpful debug: log query string when callback happens
   observe({
     qs <- session$clientData$url_search
     if (nzchar(qs)) {
@@ -70,7 +62,6 @@ server <- function(input, output, session) {
     }
   })
   
-  # Auth module
   auth <- oauth_module_server("auth", client)
   
   output$login_information <- renderUI({
@@ -87,8 +78,8 @@ server <- function(input, output, session) {
   })
 }
 
-# -------------------------------------------------------------------
-# Return Shiny app (required for Posit Connect)
-# -------------------------------------------------------------------
+# ---------------------------------------------------------
+# Return Shiny app (for Posit Connect)
+# ---------------------------------------------------------
 
 shinyApp(ui, server)
