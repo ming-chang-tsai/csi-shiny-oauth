@@ -70,12 +70,15 @@ server <- function(input, output, session) {
   
   auth <- oauth_module_server("auth", client)
   
+  
   observe({
     cat("Authenticated? ", auth$authenticated, "\n")
     if (!is.null(auth$token)) {
       cat("Token classes: ", paste(class(auth$token), collapse = ", "), "\n")
     }
   })
+  
+  
   
   output$login_information <- renderUI({
     if (auth$authenticated) {
