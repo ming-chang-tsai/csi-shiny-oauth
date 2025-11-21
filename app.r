@@ -3,6 +3,12 @@
 library(shiny)
 library(shinyOAuth)
 
+options(
+  shinyOAuth.print_errors = TRUE,
+  shinyOAuth.print_traceback = TRUE,
+  shinyOAuth.expose_error_body = TRUE
+)
+
 # ---------------------------------------------------------
 # OAuth provider config (CSI Pacific)
 # ---------------------------------------------------------
