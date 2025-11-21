@@ -3,12 +3,20 @@
 library(shiny)
 library(shinyOAuth)
 
+# Debug / observability for Connect
 options(
-  shinyOAuth.print_errors = TRUE,
+  shinyOAuth.print_errors    = TRUE,
   shinyOAuth.print_traceback = TRUE,
-  shinyOAuth.expose_error_body = TRUE
+  shinyOAuth.expose_error_body = TRUE,
+  shinyOAuth.trace_hook = function(event) {
+    # Log only interesting events
+    if (event$type %in% c("error", "http")) {
+      cat("=== shinyOAuth TRACE EVENT ===\n")
+      str(event)
+      cat("=== END TRACE EVENT ===\n")
+    }
+  }
 )
-
 # ---------------------------------------------------------
 # OAuth provider config (CSI Pacific)
 # ---------------------------------------------------------
