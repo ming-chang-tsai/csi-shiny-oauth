@@ -16,7 +16,8 @@ options(
     cat("=== shinyOAuth TRACE EVENT ===\n")
     str(event)
     cat("=== END TRACE EVENT ===\n")
-  }
+  },
+  shinyOAuth.skip_browser_token = TRUE
 )
 
 ## --------------------------------------------------------------------
