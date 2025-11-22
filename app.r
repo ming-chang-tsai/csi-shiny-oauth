@@ -8,17 +8,25 @@ library(cachem)
 ## Global options: logging & observability
 ## --------------------------------------------------------------------
 options(
-  shinyOAuth.print_errors       = TRUE,
-  shinyOAuth.print_traceback    = TRUE,
-  shinyOAuth.expose_error_body  = TRUE,
+  shinyOAuth.print_errors      = TRUE,
+  shinyOAuth.print_traceback   = TRUE,
+  shinyOAuth.expose_error_body = TRUE,
   shinyOAuth.trace_hook = function(event) {
-    # Log everything interesting to Posit Connect
     cat("=== shinyOAuth TRACE EVENT ===\n")
     str(event)
     cat("=== END TRACE EVENT ===\n")
   },
+  # DEBUG: turn off browser-token binding (to rule out proxy / cookie weirdness)
   shinyOAuth.skip_browser_token = TRUE
 )
+
+STATE_KEY <- Sys.getenv("CSIP_STATE_KEY")
+
+cat("STATE_KEY length: ", nchar(STATE_KEY), "\n")
+
+if (identical(STATE_KEY, "")) {
+  stop("CSIP_STATE_KEY is empty / not set in this environment.")
+}
 
 ## --------------------------------------------------------------------
 ## Provider configuration (CSI Pacific)
@@ -42,8 +50,8 @@ scopes <- strsplit(
 client_id     <- Sys.getenv("CSIP_CLIENT_ID")
 client_secret <- Sys.getenv("CSIP_CLIENT_SECRET")
 redirect_uri  <- Sys.getenv("CSIP_REDIRECT_URI")
-state_key     <- Sys.getenv("CSIP_STATE_KEY")
-
+# state_key     <- Sys.getenv("CSIP_STATE_KEY")
+state_key <- STATE_KEY
 
 # Shared disk cache for OAuth state (multi-process safe on Connect)
 state_cache <- cache_disk(dir = "shinyoauth_state_cache")
@@ -103,9 +111,9 @@ server <- function(input, output, session) {
   # Log authentication status + token presence
   observe({
     cat("Authenticated? ", auth$authenticated, "\n")
-    if (!is.null(auth$token)) {
-      cat("Token classes: ", paste(class(auth$token), collapse = ", "), "\n")
-    }
+    # if (!is.null(auth$token)) {
+    #   cat("Token classes: ", paste(class(auth$token), collapse = ", "), "\n")
+    # }
   })
   
   # Simple UI
