@@ -44,7 +44,7 @@ client_secret <- Sys.getenv("CSIP_CLIENT_SECRET")
 redirect_uri  <- Sys.getenv("CSIP_REDIRECT_URI")
 state_key     <- Sys.getenv("CSIP_STATE_KEY")
 
-cat("STATE_KEY length: ", nchar(STATE_KEY), "\n")
+# cat("STATE_KEY length: ", nchar(STATE_KEY), "\n")
 cat("STATE_KEY length: ", nchar(state_key), "\n")
 
 if (identical(STATE_KEY, "")) {
