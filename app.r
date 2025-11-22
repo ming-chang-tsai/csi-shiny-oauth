@@ -1,78 +1,88 @@
-# app.R
+# app.R — CSI Pacific OAuth2 (confidential) via shinyOAuth on Posit Connect
 
 library(shiny)
 library(shinyOAuth)
+library(cachem)
 
-# Debug / observability for Connect
+## --------------------------------------------------------------------
+## Global options: logging & observability
+## --------------------------------------------------------------------
 options(
-  shinyOAuth.print_errors    = TRUE,
-  shinyOAuth.print_traceback = TRUE,
-  shinyOAuth.expose_error_body = TRUE,
+  shinyOAuth.print_errors       = TRUE,
+  shinyOAuth.print_traceback    = TRUE,
+  shinyOAuth.expose_error_body  = TRUE,
   shinyOAuth.trace_hook = function(event) {
-    # Log only interesting events
-    if (event$type %in% c("error", "http")) {
-      cat("=== shinyOAuth TRACE EVENT ===\n")
-      str(event)
-      cat("=== END TRACE EVENT ===\n")
-    }
+    # Log everything interesting to Posit Connect
+    cat("=== shinyOAuth TRACE EVENT ===\n")
+    str(event)
+    cat("=== END TRACE EVENT ===\n")
   }
 )
-# ---------------------------------------------------------
-# OAuth provider config (CSI Pacific)
-# ---------------------------------------------------------
 
+## --------------------------------------------------------------------
+## Provider configuration (CSI Pacific)
+## --------------------------------------------------------------------
 provider <- oauth_provider(
-  name       = "CSI Pacific",
-  auth_url   = Sys.getenv(
-    "CSIP_AUTH_URL",
-    "https://apps.csipacific.ca/o/authorize/"
-  ),
-  token_url  = Sys.getenv(
-    "CSIP_TOKEN_URL",
-    "https://apps.csipacific.ca/o/token/"
-  ),
-  # Optional: only if you actually have this endpoint:
+  name        = "CSI Pacific",
+  auth_url    = Sys.getenv("CSIP_AUTH_URL",  "https://apps.csipacific.ca/o/authorize/"),
+  token_url   = Sys.getenv("CSIP_TOKEN_URL", "https://apps.csipacific.ca/o/token/"),
+  # If you later add a userinfo endpoint, set it here:
   userinfo_url = Sys.getenv("CSIP_USERINFO_URL", "")
 )
 
-# ---------------------------------------------------------
-# OAuth client config (CONFIDENTIAL client)
-#   All secrets/URLs pulled from environment variables
-# ---------------------------------------------------------
-
+## --------------------------------------------------------------------
+## Client configuration (confidential client)
+## --------------------------------------------------------------------
 scopes <- strsplit(
   Sys.getenv("CSIP_SCOPES", "read"),
   "\\s+"
 )[[1]]
 
-library(cachem)
+client_id     <- Sys.getenv("CSIP_CLIENT_ID")
+client_secret <- Sys.getenv("CSIP_CLIENT_SECRET")
+redirect_uri  <- Sys.getenv("CSIP_REDIRECT_URI")
+state_key     <- Sys.getenv("CSIP_STATE_KEY")
+
+# Shared disk cache for OAuth state (multi-process safe on Connect)
+state_cache <- cache_disk(dir = "shinyoauth_state_cache")
+
+# Fail fast if anything critical is missing
+if (client_id == "" || client_secret == "" || redirect_uri == "" || state_key == "") {
+  stop(paste(
+    "OAuth configuration error:\n",
+    "- CSIP_CLIENT_ID:     ", if (client_id == "") "MISSING" else "OK", "\n",
+    "- CSIP_CLIENT_SECRET: ", if (client_secret == "") "MISSING" else "OK", "\n",
+    "- CSIP_REDIRECT_URI:  ", if (redirect_uri == "") "MISSING" else redirect_uri, "\n",
+    "- CSIP_STATE_KEY:     ", if (state_key == "") "MISSING" else "OK", "\n",
+    "Set these as environment variables in Posit Connect."
+  ))
+}
 
 client <- oauth_client(
   provider      = provider,
-  client_id     = Sys.getenv("CSIP_CLIENT_ID"),
-  client_secret = Sys.getenv("CSIP_CLIENT_SECRET"),  # confidential
-  redirect_uri  = Sys.getenv("CSIP_REDIRECT_URI"),   # Connect URL
-  scopes        = Sys.getenv("CSIP_SCOPES"),   # Connect URL
-  state_store   = cachem::cache_disk(dir = "shinyoauth_state_cache"),
-  state_key     = Sys.getenv("CSIP_STATE_KEY")
+  client_id     = client_id,
+  client_secret = client_secret,
+  redirect_uri  = redirect_uri,
+  scopes        = scopes,
+  # Critical for multi-process on Connect:
+  state_store   = state_cache,
+  state_key     = state_key
 )
 
-# ---------------------------------------------------------
-# UI
-# ---------------------------------------------------------
-
+## --------------------------------------------------------------------
+## UI
+## --------------------------------------------------------------------
 ui <- fluidPage(
-  use_shinyOAuth(),
-  h2("CSI Pacific OAuth demo (confidential client)"),
+  use_shinyOAuth(),   # JS dependency (must be included!)
   uiOutput("login_information")
 )
 
-# ---------------------------------------------------------
-# Server
-# ---------------------------------------------------------
-
+## --------------------------------------------------------------------
+## Server
+## --------------------------------------------------------------------
 server <- function(input, output, session) {
-  # Helpful debug: log query string when callback happens
+  
+  # Log callback query string to help debugging
   observe({
     qs <- session$clientData$url_search
     if (nzchar(qs)) {
@@ -80,9 +90,15 @@ server <- function(input, output, session) {
     }
   })
   
-  auth <- oauth_module_server("auth", client)
+  # Start OAuth module; auto_redirect = TRUE = send anon users straight to login
+  auth <- oauth_module_server(
+    "auth",
+    client,
+    auto_redirect = TRUE
+    # async = TRUE  # optional later if you want, not required right now
+  )
   
-  
+  # Log authentication status + token presence
   observe({
     cat("Authenticated? ", auth$authenticated, "\n")
     if (!is.null(auth$token)) {
@@ -90,12 +106,10 @@ server <- function(input, output, session) {
     }
   })
   
-  
-  
+  # Simple UI
   output$login_information <- renderUI({
-    if (auth$authenticated) {
+    if (isTRUE(auth$authenticated)) {
       user_info <- auth$token@userinfo
-      
       tagList(
         tags$p("You are logged in! Your details:"),
         tags$pre(paste(capture.output(str(user_info)), collapse = "\n"))
@@ -105,9 +119,5 @@ server <- function(input, output, session) {
     }
   })
 }
-
-# ---------------------------------------------------------
-# Return Shiny app (for Posit Connect)
-# ---------------------------------------------------------
 
 shinyApp(ui, server)
