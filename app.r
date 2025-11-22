@@ -41,16 +41,20 @@ provider <- oauth_provider(
 # ---------------------------------------------------------
 
 scopes <- strsplit(
-  Sys.getenv("CSIP_SCOPES", "openid profile email"),
+  Sys.getenv("CSIP_SCOPES", "read"),
   "\\s+"
 )[[1]]
+
+library(cachem)
 
 client <- oauth_client(
   provider      = provider,
   client_id     = Sys.getenv("CSIP_CLIENT_ID"),
   client_secret = Sys.getenv("CSIP_CLIENT_SECRET"),  # confidential
   redirect_uri  = Sys.getenv("CSIP_REDIRECT_URI"),   # Connect URL
-  scopes        = scopes
+  scopes        = Sys.getenv("CSIP_SCOPES"),   # Connect URL
+  state_store   = cachem::cache_disk(dir = "shinyoauth_state_cache"),
+  state_key     = Sys.getenv("CSIP_STATE_KEY")
 )
 
 # ---------------------------------------------------------
