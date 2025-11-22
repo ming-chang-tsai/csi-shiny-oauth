@@ -32,12 +32,12 @@ provider <- oauth_provider(
   token_url= Sys.getenv("CSIP_TOKEN_URL", "https://apps.csipacific.ca/o/token/")
 )
 
-cat("AUTH URL  :", provider$auth_url,  "\n")
-cat("TOKEN URL :", provider$token_url, "\n")
+cat("AUTH URL  :", provider@auth_url,  "\n")
+cat("TOKEN URL :", provider@token_url, "\n")
 
 try({
   cat("Testing connectivity to token URL...\n")
-  resp <- httr2::request(provider$token_url) |>
+  resp <- httr2::request(provider@token_url) |>
     httr2::req_method("HEAD") |>
     httr2::req_timeout(5) |>
     httr2::req_perform()
