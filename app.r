@@ -27,12 +27,22 @@ if (identical(STATE_KEY, "")) {
 ## Provider configuration (CSI Pacific)
 ## --------------------------------------------------------------------
 provider <- oauth_provider(
-  name        = "CSI Pacific",
-  auth_url    = Sys.getenv("CSIP_AUTH_URL",  "https://apps.csipacific.ca/o/authorize/"),
-  token_url   = Sys.getenv("CSIP_TOKEN_URL", "https://apps.csipacific.ca/o/token/"),
-  # If you later add a userinfo endpoint, set it here:
-  userinfo_url = Sys.getenv("CSIP_USERINFO_URL", "")
+  name     = "CSI Pacific",
+  auth_url = Sys.getenv("CSIP_AUTH_URL",  "https://apps.csipacific.ca/o/authorize/"),
+  token_url= Sys.getenv("CSIP_TOKEN_URL", "https://apps.csipacific.ca/o/token/")
 )
+
+cat("AUTH URL  :", provider$auth_url,  "\n")
+cat("TOKEN URL :", provider$token_url, "\n")
+
+try({
+  cat("Testing connectivity to token URL...\n")
+  resp <- httr2::request(provider$token_url) |>
+    httr2::req_method("HEAD") |>
+    httr2::req_timeout(5) |>
+    httr2::req_perform()
+  cat("Token URL reachable, HTTP status:", httr2::resp_status(resp), "\n")
+}, silent = TRUE)
 
 ## --------------------------------------------------------------------
 ## Client configuration (confidential client)
