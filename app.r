@@ -4,9 +4,6 @@ library(shiny)
 library(shinyOAuth)
 library(cachem)
 
-## --------------------------------------------------------------------
-## Global options: logging & observability
-## --------------------------------------------------------------------
 options(
   shinyOAuth.print_errors      = TRUE,
   shinyOAuth.print_traceback   = TRUE,
@@ -16,14 +13,12 @@ options(
     str(event)
     cat("=== END TRACE EVENT ===\n")
   },
-  # DEBUG: turn off browser-token binding (to rule out proxy / cookie weirdness)
+  # DEBUG: turn off browser-token binding so that doesn’t block us
   shinyOAuth.skip_browser_token = TRUE
 )
 
 STATE_KEY <- Sys.getenv("CSIP_STATE_KEY")
-
 cat("STATE_KEY length: ", nchar(STATE_KEY), "\n")
-
 if (identical(STATE_KEY, "")) {
   stop("CSIP_STATE_KEY is empty / not set in this environment.")
 }
